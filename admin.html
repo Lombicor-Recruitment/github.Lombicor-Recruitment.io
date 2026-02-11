@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Portal – Recruitment</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080c0a; --panel:#0e1410; --card:#111810; --border:#1e2b22;
+  --border2:#243020; --accent:#2dff7a; --accent-dim:#1a9648;
+  --accent-glow:rgba(45,255,122,0.10); --amber:#ffb300; --red:#ff5252;
+  --blue:#4fc3f7; --text:#d4e8d8; --muted:#4a6350; --muted2:#1a2620;
+  --font-mono:'DM Mono',monospace; --font-head:'Syne',sans-serif; --r:5px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);font-size:13px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:9999;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--panel);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+
+/* ══════════════════════════════════
+   LOGIN
+══════════════════════════════════ */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:500;}
+.login-box{width:100%;max-width:380px;padding:24px;animation:fadeUp .5s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.login-label{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.login-title{font-family:var(--font-head);font-size:34px;font-weight:800;line-height:1.1;margin-bottom:32px;}
+.login-title span{color:var(--accent);}
+.lf{margin-bottom:14px;}
+.lf label{display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.lf input{width:100%;background:var(--panel);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:14px;padding:11px 13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.lf input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.btn-login{width:100%;margin-top:8px;background:var(--accent);color:#040806;border:none;border-radius:var(--r);padding:13px;font-family:var(--font-head);font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:background .2s;}
+.btn-login:hover{background:#52ffaa;}
+.btn-login:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed;}
+.login-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;}
+.login-sep{border:none;border-top:1px solid var(--border);margin:28px 0;}
+.login-note{font-size:11px;color:var(--muted);text-align:center;}
+
+/* ══════════════════════════════════
+   APP SHELL
+══════════════════════════════════ */
+#app{display:none;height:100vh;display:none;flex-direction:column;}
+#app.visible{display:flex;}
+
+/* ── TOP BAR ── */
+.topbar{height:52px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;}
+.topbar-logo{font-family:var(--font-head);font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px;}
+.topbar-logo span{color:var(--accent);}
+.topbar-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.topbar-spacer{flex:1;}
+.topbar-user{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:10px;}
+.topbar-email{color:var(--text);}
+.btn-signout{background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);font-family:var(--font-mono);font-size:11px;padding:5px 10px;cursor:pointer;transition:all .2s;}
+.btn-signout:hover{border-color:var(--red);color:var(--red);}
+
+/* ── MAIN LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:200px;background:var(--panel);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;display:flex;flex-direction:column;}
+.nav-section{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);padding:12px 18px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;transition:background .15s,color .15s;color:var(--muted);font-size:12px;border-left:2px solid transparent;}
+.nav-item:hover{background:var(--muted2);color:var(--text);}
+.nav-item.active{background:var(--accent-glow);color:var(--accent);border-left-color:var(--accent);}
+.nav-icon{font-size:14px;width:18px;text-align:center;}
+.sidebar-spacer{flex:1;}
+.sidebar-version{font-size:10px;color:var(--muted);padding:12px 18px;border-top:1px solid var(--border);}
+
+/* ── CONTENT AREA ── */
+.content{flex:1;overflow-y:auto;padding:24px;}
+
+/* ── PAGE VISIBILITY ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ══════════════════════════════════
+   STAT CARDS
+══════════════════════════════════ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:border-color .2s;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.green::before{background:var(--accent);}
+.stat-card.amber::before{background:var(--amber);}
+.stat-card.blue::before{background:var(--blue);}
+.stat-card.red::before{background:var(--red);}
+.stat-card:hover{border-color:var(--border2);}
+.stat-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.stat-value{font-family:var(--font-head);font-size:34px;font-weight:800;line-height:1;color:var(--text);}
+.stat-value.green{color:var(--accent);}
+.stat-value.amber{color:var(--amber);}
+.stat-value.blue{color:var(--blue);}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:6px;}
+
+/* ══════════════════════════════════
+   SECTION HEADERS
+══════════════════════════════════ */
+.section-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.section-head h2{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);}
+.section-line{flex:1;height:1px;background:var(--border);}
+.page-title{font-family:var(--font-head);font-size:22px;font-weight:800;margin-bottom:6px;}
+.page-subtitle{font-size:11px;color:var(--muted);margin-bottom:24px;letter-spacing:.5px;}
+
+/* ══════════════════════════════════
+   TOOLBAR (search / filters / export)
+══════════════════════════════════ */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.search-wrap{position:relative;flex:1;min-width:180px;}
+.search-wrap input{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:9px 12px 9px 34px;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--accent);}
+.search-wrap .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--muted);pointer-events:none;}
+select.filter{background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 10px;outline:none;cursor:pointer;-webkit-appearance:none;}
+select.filter:focus{border-color:var(--accent);}
+input[type="date"].filter{background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 10px;outline:none;color-scheme:dark;}
+input[type="date"].filter:focus{border-color:var(--accent);}
+.btn{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.primary{background:var(--accent);color:#040806;border-color:var(--accent);font-weight:500;}
+.btn.primary:hover{background:#52ffaa;border-color:#52ffaa;color:#040806;}
+.btn.danger{border-color:var(--red);color:var(--red);}
+.btn.danger:hover{background:rgba(255,82,82,.1);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ══════════════════════════════════
+   TABLE
+══════════════════════════════════ */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:auto;}
+table{width:100%;border-collapse:collapse;min-width:700px;}
+thead tr{background:var(--panel);border-bottom:1px solid var(--border);}
+th{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:11px 14px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+th:hover{color:var(--accent);}
+th .sort-arrow{margin-left:4px;opacity:.4;}
+th.sorted{color:var(--accent);}
+th.sorted .sort-arrow{opacity:1;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--muted2);}
+tbody tr.selected{background:rgba(45,255,122,0.06);}
+td{padding:11px 14px;font-size:12px;color:var(--text);white-space:nowrap;}
+td.truncate{max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+.cb-col{width:36px;}
+input[type="checkbox"]{accent-color:var(--accent);cursor:pointer;width:13px;height:13px;}
+.badge{display:inline-block;border-radius:3px;font-size:10px;padding:2px 7px;font-weight:500;letter-spacing:.5px;}
+.badge.yes{background:rgba(45,255,122,.12);color:var(--accent);}
+.badge.no{background:rgba(255,255,255,.05);color:var(--muted);}
+.badge.new{background:rgba(79,195,247,.12);color:var(--blue);}
+
+.table-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);flex-wrap:wrap;gap:8px;}
+.pagination{display:flex;align-items:center;gap:6px;}
+.pg-btn{background:var(--panel);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--font-mono);font-size:11px;padding:4px 9px;cursor:pointer;transition:all .15s;}
+.pg-btn:hover{border-color:var(--accent);color:var(--accent);}
+.pg-btn:disabled{opacity:.3;cursor:not-allowed;}
+.pg-info{color:var(--muted);}
+
+/* ══════════════════════════════════
+   MODAL (view / edit)
+══════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:var(--r);width:100%;max-width:680px;max-height:90vh;overflow-y:auto;animation:fadeUp .25s ease;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel);z-index:10;}
+.modal-title{font-family:var(--font-head);font-size:16px;font-weight:700;}
+.modal-ref{font-size:10px;color:var(--accent);letter-spacing:2px;margin-top:2px;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:3px;transition:color .15s,background .15s;}
+.modal-close:hover{color:var(--red);background:rgba(255,82,82,.1);}
+.modal-body{padding:22px;}
+.modal-section{margin-bottom:22px;}
+.modal-section-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-field label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.modal-field .val{font-size:13px;color:var(--text);}
+.modal-field input,.modal-field select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:13px;padding:9px 11px;outline:none;transition:border-color .2s;}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--accent);}
+.modal-field.full{grid-column:1/-1;}
+.modal-footer{display:flex;gap:10px;padding:16px 22px;border-top:1px solid var(--border);background:var(--panel);position:sticky;bottom:0;}
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.doc-item{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+.doc-item:hover{border-color:var(--accent);background:var(--accent-glow);}
+.doc-icon{font-size:28px;margin-bottom:6px;}
+.doc-name{font-size:10px;color:var(--muted);letter-spacing:.5px;}
+
+/* ══════════════════════════════════
+   CONFIRM DIALOG
+══════════════════════════════════ */
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
+#confirm-overlay.open{display:flex;}
+.confirm-box{background:var(--panel);border:1px solid var(--border2);border-radius:var(--r);padding:28px;max-width:360px;width:100%;text-align:center;animation:fadeUp .2s ease;}
+.confirm-icon{font-size:40px;margin-bottom:14px;}
+.confirm-title{font-family:var(--font-head);font-size:18px;font-weight:700;margin-bottom:8px;}
+.confirm-msg{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6;}
+.confirm-btns{display:flex;gap:10px;justify-content:center;}
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+#toast-wrap{position:fixed;bottom:20px;right:20px;z-index:400;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--panel);border:1px solid var(--border2);border-radius:var(--r);padding:10px 16px;font-size:12px;display:flex;align-items:center;gap:8px;min-width:240px;animation:toastIn .25s ease;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+.toast.success{border-left:3px solid var(--accent);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--blue);}
+
+/* ══════════════════════════════════
+   LOADING STATES
+══════════════════════════════════ */
+.skeleton{background:linear-gradient(90deg,var(--card) 25%,var(--muted2) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:3px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-row td{padding:20px 14px;}
+
+/* ══════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════ */
+.empty-state{text-align:center;padding:60px 20px;}
+.empty-icon{font-size:48px;margin-bottom:14px;opacity:.4;}
+.empty-title{font-family:var(--font-head);font-size:16px;color:var(--muted);margin-bottom:6px;}
+.empty-sub{font-size:11px;color:var(--muted);opacity:.6;}
+
+/* ══════════════════════════════════
+   EXPORT PAGE
+══════════════════════════════════ */
+.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px;}
+.export-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;transition:border-color .2s;}
+.export-card:hover{border-color:var(--border2);}
+.export-card-icon{font-size:32px;margin-bottom:12px;}
+.export-card-title{font-family:var(--font-head);font-size:14px;font-weight:700;margin-bottom:6px;}
+.export-card-desc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:16px;}
+.filter-row{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.filter-row label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.filter-row select,.filter-row input{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:9px 11px;outline:none;}
+.filter-row select:focus,.filter-row input:focus{border-color:var(--accent);}
+
+/* ══════════════════════════════════
+   OVERVIEW CHART (pure CSS bars)
+══════════════════════════════════ */
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:24px;}
+.chart-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:100px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.bar{width:100%;background:var(--accent-dim);border-radius:3px 3px 0 0;transition:height .5s ease;min-height:2px;}
+.bar:hover{background:var(--accent);}
+.bar-label{font-size:9px;color:var(--muted);letter-spacing:.5px;text-align:center;}
+.bar-val{font-size:9px;color:var(--text);}
+
+/* responsive */
+@media(max-width:640px){
+  .sidebar{display:none;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .modal-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-label">Recruitment Portal</div>
+    <div class="login-title">Admin <span>Access</span></div>
+    <div class="lf">
+      <label>Email Address</label>
+      <input type="email" id="login-email" placeholder="admin@example.com" autocomplete="email"/>
+    </div>
+    <div class="lf">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+    <hr class="login-sep"/>
+    <div class="login-note">Authorised personnel only. All activity is logged.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     APP SHELL
+═══════════════════════════════════ -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-dot"></div>
+      Recruit<span>Admin</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-user">
+      <span>Signed in as <span class="topbar-email" id="user-email">—</span></span>
+      <button class="btn-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="nav-section">Navigation</div>
+      <div class="nav-item active" onclick="showPage('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-item" onclick="showPage('applicants')" id="nav-applicants">
+        <span class="nav-icon">👥</span> Applicants
+      </div>
+      <div class="nav-item" onclick="showPage('export')" id="nav-export">
+        <span class="nav-icon">📤</span> Export
+      </div>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-version">v1.0.0 · Admin</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ═══ PAGE: OVERVIEW ═══ -->
+      <div class="page active" id="page-overview">
+        <div class="page-title">Overview</div>
+        <div class="page-subtitle">Live summary of all application data</div>
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total Applications</div>
+            <div class="stat-value green" id="stat-total">—</div>
+            <div class="stat-sub">All time</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value blue" id="stat-month">—</div>
+            <div class="stat-sub" id="stat-month-label">—</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Packhouse Exp.</div>
+            <div class="stat-value amber" id="stat-pack">—</div>
+            <div class="stat-sub">Have experience</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Forklift Licence</div>
+            <div class="stat-value" id="stat-fork" style="color:var(--blue)">—</div>
+            <div class="stat-sub">Have licence</div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-title">Applications per month (last 6 months)</div>
+          <div class="bar-chart" id="monthly-chart"></div>
+        </div>
+
+        <div class="section-head">
+          <h2>Recent Applications</h2>
+          <div class="section-line"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ref</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Pack. Exp</th>
+                <th>Forklift</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="recent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ PAGE: APPLICANTS ═══ -->
+      <div class="page" id="page-applicants">
+        <div class="page-title">Applicants</div>
+        <div class="page-subtitle">Search, filter, view and manage all applications</div>
+
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search name, ID, phone, ref…" oninput="onSearch()"/>
+          </div>
+          <select class="filter" id="filter-pack" onchange="onFilter()">
+            <option value="">All Packhouse</option>
+            <option value="true">Has Experience</option>
+            <option value="false">No Experience</option>
+          </select>
+          <select class="filter" id="filter-fork" onchange="onFilter()">
+            <option value="">All Forklift</option>
+            <option value="true">Has Licence</option>
+            <option value="false">No Licence</option>
+          </select>
+          <select class="filter" id="filter-gender" onchange="onFilter()">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+          </select>
+          <select class="filter" id="filter-race" onchange="onFilter()">
+            <option value="">All Races</option>
+            <option value="African / Black">African / Black</option>
+            <option value="Coloured">Coloured</option>
+            <option value="Indian / Asian">Indian / Asian</option>
+            <option value="White">White</option>
+          </select>
+          <input type="date" class="filter" id="filter-from" onchange="onFilter()" title="From date"/>
+          <input type="date" class="filter" id="filter-to" onchange="onFilter()" title="To date"/>
+          <button class="btn" onclick="clearFilters()">✕ Clear</button>
+          <button class="btn primary" onclick="exportSelectedPDF()" id="btn-export-sel" disabled>⬇ Export Selected PDF</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="cb-col"><input type="checkbox" id="cb-all" onchange="toggleAll(this)"/></th>
+                <th onclick="sortBy('ref_id')">Ref <span class="sort-arrow" id="sort-ref_id">↕</span></th>
+                <th onclick="sortBy('first_name')">Name <span class="sort-arrow" id="sort-first_name">↕</span></th>
+                <th onclick="sortBy('id_number')">ID Number <span class="sort-arrow" id="sort-id_number">↕</span></th>
+                <th>Gender</th>
+                <th>Race</th>
+                <th>Contact</th>
+                <th onclick="sortBy('packhouse_exp')">Pack. <span class="sort-arrow" id="sort-packhouse_exp">↕</span></th>
+                <th onclick="sortBy('forklift_licence')">Fork. <span class="sort-arrow" id="sort-forklift_licence">↕</span></th>
+                <th onclick="sortBy('submitted_at')">Date <span class="sort-arrow" id="sort-submitted_at">↕</span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="main-tbody"></tbody>
+          </table>
+          <div class="table-footer">
+            <span id="table-count">Loading…</span>
+            <div class="pagination">
+              <button class="pg-btn" id="pg-prev" onclick="changePage(-1)">← Prev</button>
+              <span class="pg-info" id="pg-info">—</span>
+              <button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PAGE: EXPORT ═══ -->
+      <div class="page" id="page-export">
+        <div class="page-title">Export Data</div>
+        <div class="page-subtitle">Download filtered records as PDF or CSV</div>
+
+        <div class="export-grid">
+
+          <!-- PDF by date range -->
+          <div class="export-card">
+            <div class="export-card-icon">📄</div>
+            <div class="export-card-title">PDF by Date Range</div>
+            <div class="export-card-desc">Export a formatted PDF report of all applications within a specified date range.</div>
+            <div class="filter-row">
+              <label>From</label>
+              <input type="date" id="exp-from" class="filter"/>
+            </div>
+            <div class="filter-row">
+              <label>To</label>
+              <input type="date" id="exp-to" class="filter"/>
+            </div>
+            <button class="btn primary" style="width:100%" onclick="exportPDFDateRange()">⬇ Export PDF</button>
+          </div>
+
+          <!-- PDF by type -->
+          <div class="export-card">
+            <div class="export-card-icon">🔎</div>
+            <div class="export-card-title">PDF by Applicant Type</div>
+            <div class="export-card-desc">Export applicants filtered by packhouse experience and/or forklift licence status.</div>
+            <div class="filter-row">
+              <label>Packhouse Experience</label>
+              <select id="exp-pack" class="filter">
+                <option value="">Any</option>
+                <option value="true">Yes – Has Experience</option>
+                <option value="false">No – No Experience</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>Forklift Licence</label>
+              <select id="exp-fork" class="filter">
+                <option value="">Any</option>
+                <option value="true">Yes – Has Licence</option>
+                <option value="false">No – No Licence</option>
+              </select>
+            </div>
+            <button class="btn primary" style="width:100%" onclick="exportPDFByType()">⬇ Export PDF</button>
+          </div>
+
+          <!-- CSV full DB -->
+          <div class="export-card">
+            <div class="export-card-icon">🗄️</div>
+            <div class="export-card-title">Full Database CSV</div>
+            <div class="export-card-desc">Download the entire applications database as a CSV file. Suitable for spreadsheet analysis or backup.</div>
+            <div style="flex:1;min-height:80px;"></div>
+            <button class="btn primary" style="width:100%;margin-top:16px" onclick="exportFullCSV()">⬇ Download Full CSV</button>
+          </div>
+
+          <!-- CSV filtered -->
+          <div class="export-card">
+            <div class="export-card-icon">📊</div>
+            <div class="export-card-title">Filtered CSV Export</div>
+            <div class="export-card-desc">Export CSV using the active filters set on the Applicants page (search, date, type).</div>
+            <div style="flex:1;min-height:80px;"></div>
+            <button class="btn primary" style="width:100%;margin-top:16px" onclick="exportFilteredCSV()">⬇ Export Filtered CSV</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════
+     MODAL: VIEW / EDIT APPLICANT
+═══════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Applicant Details</div>
+        <div class="modal-ref" id="modal-ref"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal(true)">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section">
+        <div class="modal-section-title">Personal Information</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Name</label>
+            <input type="text" id="mf-first_name"/>
+          </div>
+          <div class="modal-field">
+            <label>Surname</label>
+            <input type="text" id="mf-surname"/>
+          </div>
+          <div class="modal-field">
+            <label>ID Number</label>
+            <input type="text" id="mf-id_number"/>
+          </div>
+          <div class="modal-field">
+            <label>Contact Number</label>
+            <input type="text" id="mf-contact_number"/>
+          </div>
+          <div class="modal-field">
+            <label>Gender</label>
+            <select id="mf-gender">
+              <option>Male</option><option>Female</option>
+              <option>Non-binary</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Race</label>
+            <select id="mf-race">
+              <option>African / Black</option><option>Coloured</option>
+              <option>Indian / Asian</option><option>White</option>
+              <option>Other</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Address</label>
+            <input type="text" id="mf-address"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Experience &amp; Skills</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Packhouse Experience</label>
+            <select id="mf-packhouse_exp">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Forklift Licence</label>
+            <select id="mf-forklift_licence">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Uploaded Documents</div>
+        <div class="docs-grid" id="modal-docs"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="btn" onclick="exportSinglePDF()">📄 Export PDF</button>
+      <button class="btn danger" onclick="confirmDelete()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CONFIRM DIALOG
+═══════════════════════════════════ -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠️</div>
+    <div class="confirm-title" id="confirm-title">Confirm Delete</div>
+    <div class="confirm-msg" id="confirm-msg">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn danger" id="confirm-yes" onclick="confirmYes()">Delete</button>
+      <button class="btn" onclick="confirmNo()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-wrap"></div>
+
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════ -->
+<script>
+/* ──────────────────────────────────────────
+   CONFIG  —  Replace with your Supabase creds
+────────────────────────────────────────── */
+const SUPABASE_URL   = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON  = 'YOUR_ANON_PUBLIC_KEY';
+const STORAGE_BUCKET = 'applications';
+const DB_TABLE       = 'applications';
+
+/* ── Init ── */
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ── State ── */
+let allRecords   = [];   // full filtered set (for pagination / export)
+let currentPage  = 1;
+const PAGE_SIZE  = 25;
+let sortCol      = 'submitted_at';
+let sortAsc      = false;
+let activeFilters = {};
+let selectedIds  = new Set();
+let editingId    = null;
+let deleteId     = null;
+
+/* ══════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════ */
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+  if (!email || !pass) { errEl.textContent = 'Please enter email and password.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  errEl.textContent = '';
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    errEl.textContent = error.message;
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+    return;
+  }
+  enterApp(data.user.email);
+}
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doSignOut() {
+  await db.auth.signOut();
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+}
+
+function enterApp(email) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('user-email').textContent = email;
+  loadOverview();
+  loadApplicants();
+}
+
+/* Auto-restore session */
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) enterApp(session.user.email);
+})();
+
+/* ══════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════ */
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+/* ══════════════════════════════════════════
+   OVERVIEW PAGE
+══════════════════════════════════════════ */
+async function loadOverview() {
+  // Total
+  const { count: total } = await db.from(DB_TABLE).select('*', { count: 'exact', head: true });
+  document.getElementById('stat-total').textContent = total ?? '—';
+
+  // This month
+  const now  = new Date();
+  const ym   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const { count: monthCount } = await db.from(DB_TABLE)
+    .select('*', { count: 'exact', head: true })
+    .gte('submitted_at', ym + '-01')
+    .lt('submitted_at',  ym + '-32');
+  document.getElementById('stat-month').textContent = monthCount ?? '0';
+  document.getElementById('stat-month-label').textContent = now.toLocaleString('default',{month:'long',year:'numeric'});
+
+  // Packhouse
+  const { count: packCount } = await db.from(DB_TABLE)
+    .select('*', { count: 'exact', head: true })
+    .eq('packhouse_exp', true);
+  document.getElementById('stat-pack').textContent = packCount ?? '0';
+
+  // Forklift
+  const { count: forkCount } = await db.from(DB_TABLE)
+    .select('*', { count: 'exact', head: true })
+    .eq('forklift_licence', true);
+  document.getElementById('stat-fork').textContent = forkCount ?? '0';
+
+  // Monthly chart (last 6 months)
+  buildMonthlyChart();
+
+  // Recent 10
+  const { data: recent } = await db.from(DB_TABLE)
+    .select('*')
+    .order('submitted_at', { ascending: false })
+    .limit(10);
+  renderRecentTable(recent || []);
+}
+
+async function buildMonthlyChart() {
+  const months = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: d.toLocaleString('default', { month: 'short' }),
+      from:  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`,
+      to:    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-31`,
+    });
+  }
+  const counts = await Promise.all(months.map(async m => {
+    const { count } = await db.from(DB_TABLE)
+      .select('*', { count: 'exact', head: true })
+      .gte('submitted_at', m.from)
+      .lte('submitted_at', m.to);
+    return count || 0;
+  }));
+  const max = Math.max(...counts, 1);
+  const chart = document.getElementById('monthly-chart');
+  chart.innerHTML = counts.map((c, i) => `
+    <div class="bar-col">
+      <div class="bar-val">${c}</div>
+      <div class="bar" style="height:${Math.round((c/max)*80)+2}px" title="${c} applications"></div>
+      <div class="bar-label">${months[i].label}</div>
+    </div>
+  `).join('');
+}
+
+function renderRecentTable(rows) {
+  const tbody = document.getElementById('recent-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No applications yet</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr onclick="openModal('${r.id}')">
+      <td><span class="badge new">${r.ref_id || '—'}</span></td>
+      <td>${esc(r.first_name)} ${esc(r.surname)}</td>
+      <td>${esc(r.contact_number)}</td>
+      <td><span class="badge ${r.packhouse_exp ? 'yes':'no'}">${r.packhouse_exp ? 'Yes':'No'}</span></td>
+      <td><span class="badge ${r.forklift_licence ? 'yes':'no'}">${r.forklift_licence ? 'Yes':'No'}</span></td>
+      <td>${fmtDate(r.submitted_at)}</td>
+      <td><button class="btn" onclick="event.stopPropagation();openModal('${r.id}')">View</button></td>
+    </tr>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════
+   APPLICANTS PAGE
+══════════════════════════════════════════ */
+async function loadApplicants() {
+  renderLoadingRows();
+  let q = db.from(DB_TABLE).select('*', { count: 'exact' });
+
+  // Apply filters
+  const search = (document.getElementById('search-input')?.value || '').trim();
+  const pack   = document.getElementById('filter-pack')?.value;
+  const fork   = document.getElementById('filter-fork')?.value;
+  const gender = document.getElementById('filter-gender')?.value;
+  const race   = document.getElementById('filter-race')?.value;
+  const from   = document.getElementById('filter-from')?.value;
+  const to     = document.getElementById('filter-to')?.value;
+
+  if (pack !== '')   q = q.eq('packhouse_exp', pack === 'true');
+  if (fork !== '')   q = q.eq('forklift_licence', fork === 'true');
+  if (gender)        q = q.eq('gender', gender);
+  if (race)          q = q.eq('race', race);
+  if (from)          q = q.gte('submitted_at', from);
+  if (to)            q = q.lte('submitted_at', to + 'T23:59:59');
+
+  if (search) {
+    q = q.or(
+      `first_name.ilike.%${search}%,surname.ilike.%${search}%,id_number.ilike.%${search}%,` +
+      `contact_number.ilike.%${search}%,ref_id.ilike.%${search}%`
+    );
+  }
+
+  q = q.order(sortCol, { ascending: sortAsc });
+
+  const { data, error, count } = await q;
+  if (error) { showToast('Error loading data: ' + error.message, 'error'); return; }
+
+  allRecords = data || [];
+  renderTable(allRecords, count || 0);
+}
+
+function renderLoadingRows() {
+  document.getElementById('main-tbody').innerHTML = `
+    <tr class="loading-row"><td colspan="11" style="text-align:center;color:var(--muted)">
+      <span class="spinner"></span> Loading…
+    </td></tr>`;
+}
+
+function renderTable(rows, total) {
+  const tbody = document.getElementById('main-tbody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = rows.slice(start, start + PAGE_SIZE);
+
+  document.getElementById('table-count').textContent =
+    `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} result${rows.length !== 1 ? 's':''}`;
+
+  const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+  document.getElementById('pg-info').textContent = `Page ${currentPage} / ${totalPages || 1}`;
+  document.getElementById('pg-prev').disabled = currentPage <= 1;
+  document.getElementById('pg-next').disabled = currentPage >= totalPages;
+
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">No results found</div>
+      <div class="empty-sub">Try adjusting your search or filters</div>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = slice.map(r => `
+    <tr class="${selectedIds.has(r.id) ? 'selected' : ''}" onclick="openModal(${r.id})">
+      <td class="cb-col" onclick="event.stopPropagation()">
+        <input type="checkbox" ${selectedIds.has(r.id)?'checked':''} onchange="toggleSelect(${r.id}, this.checked)"/>
+      </td>
+      <td><span class="badge new">${esc(r.ref_id)||'—'}</span></td>
+      <td>${esc(r.first_name)} ${esc(r.surname)}</td>
+      <td class="truncate">${esc(r.id_number)}</td>
+      <td>${esc(r.gender)||'—'}</td>
+      <td>${esc(r.race)||'—'}</td>
+      <td>${esc(r.contact_number)}</td>
+      <td><span class="badge ${r.packhouse_exp?'yes':'no'}">${r.packhouse_exp?'Yes':'No'}</span></td>
+      <td><span class="badge ${r.forklift_licence?'yes':'no'}">${r.forklift_licence?'Yes':'No'}</span></td>
+      <td>${fmtDate(r.submitted_at)}</td>
+      <td onclick="event.stopPropagation()">
+        <button class="btn" style="padding:5px 10px" onclick="openModal(${r.id})">View</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function onSearch() { currentPage = 1; loadApplicants(); }
+function onFilter() { currentPage = 1; loadApplicants(); }
+function clearFilters() {
+  ['search-input','filter-pack','filter-fork','filter-gender','filter-race','filter-from','filter-to']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  currentPage = 1; selectedIds.clear(); loadApplicants();
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+  document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '↕');
+  const arrow = document.getElementById('sort-' + col);
+  if (arrow) arrow.textContent = sortAsc ? '↑' : '↓';
+  loadApplicants();
+}
+
+function changePage(dir) {
+  const totalPages = Math.ceil(allRecords.length / PAGE_SIZE);
+  currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+  renderTable(allRecords, allRecords.length);
+}
+
+/* Selection */
+function toggleSelect(id, checked) {
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+  document.getElementById('btn-export-sel').disabled = selectedIds.size === 0;
+  document.querySelectorAll('#main-tbody tr').forEach(tr => {
+    const cb = tr.querySelector('input[type=checkbox]');
+    if (cb) tr.classList.toggle('selected', cb.checked);
+  });
+}
+function toggleAll(cb) {
+  const start = (currentPage-1)*PAGE_SIZE;
+  allRecords.slice(start, start+PAGE_SIZE).forEach(r => {
+    if(cb.checked) selectedIds.add(r.id); else selectedIds.delete(r.id);
+  });
+  document.getElementById('btn-export-sel').disabled = selectedIds.size === 0;
+  renderTable(allRecords, allRecords.length);
+}
+
+/* ══════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════ */
+async function openModal(id) {
+  editingId = id;
+  const rec = allRecords.find(r => r.id == id);
+  if (!rec) {
+    // Fetch directly
+    const { data } = await db.from(DB_TABLE).select('*').eq('id', id).single();
+    if (!data) { showToast('Could not load record', 'error'); return; }
+    populateModal(data);
+  } else {
+    populateModal(rec);
+  }
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function populateModal(r) {
+  document.getElementById('modal-title').textContent = `${r.first_name} ${r.surname}`;
+  document.getElementById('modal-ref').textContent = r.ref_id || '';
+  ['first_name','surname','id_number','contact_number','address'].forEach(f => {
+    const el = document.getElementById('mf-' + f);
+    if(el) el.value = r[f] || '';
+  });
+  ['gender','race'].forEach(f => {
+    const el = document.getElementById('mf-' + f);
+    if(el) el.value = r[f] || '';
+  });
+  document.getElementById('mf-packhouse_exp').value = String(r.packhouse_exp);
+  document.getElementById('mf-forklift_licence').value = String(r.forklift_licence);
+
+  // Documents
+  const docs = [
+    { path: r.id_copy_path,       label: 'ID Copy',       icon: '🪪' },
+    { path: r.proof_sars_path,    label: 'SARS Proof',    icon: '📋' },
+    { path: r.proof_bank_path,    label: 'Bank Proof',    icon: '🏦' },
+    { path: r.payslip_path,       label: 'Payslip',       icon: '💼' },
+    { path: r.forklift_doc_path,  label: 'Forklift Lic.', icon: '🏗️' },
+  ].filter(d => d.path);
+
+  document.getElementById('modal-docs').innerHTML = docs.length
+    ? docs.map(d => `
+        <div class="doc-item" onclick="viewDoc('${d.path}')">
+          <div class="doc-icon">${d.icon}</div>
+          <div class="doc-name">${d.label}</div>
+          <div style="font-size:10px;color:var(--accent);margin-top:4px;">Click to open ↗</div>
+        </div>
+      `).join('')
+    : `<div style="font-size:12px;color:var(--muted)">No documents on file.</div>`;
+}
+
+async function viewDoc(path) {
+  const { data } = db.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  if (data?.publicUrl) {
+    window.open(data.publicUrl, '_blank');
+  } else {
+    // Try signed URL
+    const { data: signed, error } = await db.storage.from(STORAGE_BUCKET).createSignedUrl(path, 60);
+    if (signed) window.open(signed.signedUrl, '_blank');
+    else showToast('Could not open document', 'error');
+  }
+}
+
+function closeModal(force) {
+  if (force === true || (force && force.target === document.getElementById('modal-overlay'))) {
+    document.getElementById('modal-overlay').classList.remove('open');
+    editingId = null;
+  }
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const payload = {
+    first_name:       document.getElementById('mf-first_name').value.trim(),
+    surname:          document.getElementById('mf-surname').value.trim(),
+    id_number:        document.getElementById('mf-id_number').value.trim(),
+    contact_number:   document.getElementById('mf-contact_number').value.trim(),
+    address:          document.getElementById('mf-address').value.trim(),
+    gender:           document.getElementById('mf-gender').value,
+    race:             document.getElementById('mf-race').value,
+    packhouse_exp:    document.getElementById('mf-packhouse_exp').value === 'true',
+    forklift_licence: document.getElementById('mf-forklift_licence').value === 'true',
+  };
+  const { error } = await db.from(DB_TABLE).update(payload).eq('id', editingId);
+  if (error) { showToast('Save failed: ' + error.message, 'error'); return; }
+  showToast('Changes saved successfully', 'success');
+  closeModal(true);
+  loadApplicants();
+  loadOverview();
+}
+
+/* ══════════════════════════════════════════
+   DELETE
+══════════════════════════════════════════ */
+function confirmDelete() {
+  deleteId = editingId;
+  document.getElementById('confirm-title').textContent = 'Delete Application?';
+  document.getElementById('confirm-msg').textContent = 'This will permanently delete this applicant record. This action cannot be undone.';
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function confirmNo() { document.getElementById('confirm-overlay').classList.remove('open'); deleteId = null; }
+async function confirmYes() {
+  if (!deleteId) return;
+  const { error } = await db.from(DB_TABLE).delete().eq('id', deleteId);
+  if (error) { showToast('Delete failed: ' + error.message, 'error'); return; }
+  showToast('Record deleted', 'success');
+  document.getElementById('confirm-overlay').classList.remove('open');
+  closeModal(true);
+  loadApplicants();
+  loadOverview();
+  deleteId = null;
+}
+
+/* ══════════════════════════════════════════
+   PDF EXPORT HELPERS
+══════════════════════════════════════════ */
+function buildPDF(rows, title, subtitle) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  // Header
+  doc.setFillColor(8, 12, 10);
+  doc.rect(0, 0, 297, 30, 'F');
+  doc.setTextColor(45, 255, 122);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RECRUITMENT ADMIN PORTAL', 14, 12);
+  doc.setTextColor(212, 232, 216);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(title, 14, 20);
+  doc.text(subtitle, 14, 26);
+  doc.setTextColor(74, 99, 80);
+  doc.text('Generated: ' + new Date().toLocaleString(), 200, 26);
+
+  const cols = [
+    { header: 'Ref',         dataKey: 'ref_id' },
+    { header: 'First Name',  dataKey: 'first_name' },
+    { header: 'Surname',     dataKey: 'surname' },
+    { header: 'ID Number',   dataKey: 'id_number' },
+    { header: 'Gender',      dataKey: 'gender' },
+    { header: 'Race',        dataKey: 'race' },
+    { header: 'Contact',     dataKey: 'contact_number' },
+    { header: 'Address',     dataKey: 'address' },
+    { header: 'Pack. Exp',   dataKey: 'packhouse_exp' },
+    { header: 'Forklift',    dataKey: 'forklift_licence' },
+    { header: 'Date',        dataKey: 'submitted_at' },
+  ];
+
+  const tableData = rows.map(r => ({
+    ...r,
+    packhouse_exp:   r.packhouse_exp   ? 'Yes' : 'No',
+    forklift_licence: r.forklift_licence ? 'Yes' : 'No',
+    submitted_at:    fmtDate(r.submitted_at),
+  }));
+
+  doc.autoTable({
+    startY: 34,
+    columns: cols,
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: [14, 20, 16], textColor: [45, 255, 122], fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fillColor: [17, 24, 16], textColor: [212, 232, 216], fontSize: 8 },
+    alternateRowStyles: { fillColor: [11, 16, 12] },
+    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 24 }, 1: { cellWidth: 24 }, 2: { cellWidth: 24 },
+      3: { cellWidth: 28 }, 7: { cellWidth: 38 },
+    },
+  });
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(74,99,80);
+    doc.text(`Page ${i} of ${pageCount} · Confidential`, 14, doc.internal.pageSize.height - 8);
+  }
+
+  return doc;
+}
+
+function exportSinglePDF() {
+  const rec = allRecords.find(r => r.id == editingId);
+  if (!rec) return;
+  const doc = buildPDF([rec], 'Single Applicant Report', `${rec.first_name} ${rec.surname} · ${rec.ref_id}`);
+  doc.save(`applicant-${rec.ref_id || rec.id}.pdf`);
+  showToast('PDF downloaded', 'success');
+}
+
+function exportSelectedPDF() {
+  const rows = allRecords.filter(r => selectedIds.has(r.id));
+  if (!rows.length) { showToast('No applicants selected', 'info'); return; }
+  const doc = buildPDF(rows, 'Selected Applicants Report', `${rows.length} applicant(s) · Generated ${new Date().toLocaleDateString()}`);
+  doc.save(`selected-applicants-${Date.now()}.pdf`);
+  showToast(`PDF with ${rows.length} records downloaded`, 'success');
+}
+
+async function exportPDFDateRange() {
+  const from = document.getElementById('exp-from').value;
+  const to   = document.getElementById('exp-to').value;
+  if (!from || !to) { showToast('Please select both From and To dates', 'info'); return; }
+  let q = db.from(DB_TABLE).select('*').gte('submitted_at', from).lte('submitted_at', to + 'T23:59:59').order('submitted_at');
+  const { data, error } = await q;
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  if (!data?.length) { showToast('No records found in that date range', 'info'); return; }
+  const doc = buildPDF(data, 'Date Range Report', `${fmtDate(from)} – ${fmtDate(to)} · ${data.length} record(s)`);
+  doc.save(`report-${from}-to-${to}.pdf`);
+  showToast(`PDF with ${data.length} records downloaded`, 'success');
+}
+
+async function exportPDFByType() {
+  const pack = document.getElementById('exp-pack').value;
+  const fork = document.getElementById('exp-fork').value;
+  let q = db.from(DB_TABLE).select('*');
+  if (pack !== '') q = q.eq('packhouse_exp', pack === 'true');
+  if (fork !== '') q = q.eq('forklift_licence', fork === 'true');
+  q = q.order('submitted_at');
+  const { data, error } = await q;
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  if (!data?.length) { showToast('No records match those filters', 'info'); return; }
+  const packLabel = pack === '' ? 'Any' : (pack === 'true' ? 'Yes' : 'No');
+  const forkLabel = fork === '' ? 'Any' : (fork === 'true' ? 'Yes' : 'No');
+  const doc = buildPDF(data, 'Applicant Type Report',
+    `Packhouse: ${packLabel} · Forklift: ${forkLabel} · ${data.length} record(s)`);
+  doc.save(`report-type-${Date.now()}.pdf`);
+  showToast(`PDF with ${data.length} records downloaded`, 'success');
+}
+
+/* ══════════════════════════════════════════
+   CSV EXPORT
+══════════════════════════════════════════ */
+function rowsToCSV(rows) {
+  const headers = ['ref_id','first_name','surname','id_number','race','gender',
+    'contact_number','address','packhouse_exp','forklift_licence','submitted_at'];
+  const lines = [headers.join(',')];
+  rows.forEach(r => {
+    lines.push(headers.map(h => {
+      const v = r[h] ?? '';
+      const s = String(v).replace(/"/g, '""');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+    }).join(','));
+  });
+  return lines.join('\n');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function exportFullCSV() {
+  showToast('Fetching all records…', 'info');
+  const { data, error } = await db.from(DB_TABLE).select('*').order('submitted_at');
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  downloadCSV(rowsToCSV(data || []), `full-export-${new Date().toISOString().slice(0,10)}.csv`);
+  showToast(`CSV with ${data.length} records downloaded`, 'success');
+}
+
+function exportFilteredCSV() {
+  if (!allRecords.length) { showToast('No records to export. Apply filters on the Applicants page first.', 'info'); return; }
+  downloadCSV(rowsToCSV(allRecords), `filtered-export-${new Date().toISOString().slice(0,10)}.csv`);
+  showToast(`CSV with ${allRecords.length} records downloaded`, 'success');
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+function showToast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+}
+</script>
+</body>
+</html>
