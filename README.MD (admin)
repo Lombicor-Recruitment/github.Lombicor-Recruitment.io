@@ -1,0 +1,61 @@
+Recruitment Admin Portal
+A single-file admin dashboard for managing job applications stored in Supabase.
+Hosted on GitHub Pages — no backend, no build step required.
+Features
+Feature
+Details
+🔐 Login
+Supabase Auth (email + password) — only authorised admins can access
+📊 Overview
+Live stats: total applications, this month, packhouse count, forklift count, monthly bar chart, recent 10
+👥 Applicants
+Full searchable table with sort, pagination (25/page)
+🔎 Filters
+Packhouse experience, forklift licence, gender, race, date range
+✏️ Edit
+Click any row → modal view/edit all fields, save changes back to Supabase
+📂 Documents
+View uploaded files (ID copy, SARS, bank proof, payslip, forklift licence) directly from Supabase Storage
+🗑️ Delete
+Confirm-dialog protected delete
+📄 PDF Export
+Single applicant · selected applicants · date range · applicant type
+📊 CSV Export
+Full database download · filtered/active results
+Setup
+1. Supabase credentials
+Open admin.html and replace the two config lines near the bottom of the <script> tag:
+const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_ANON = 'YOUR_ANON_PUBLIC_KEY';
+Both values are in your Supabase project under Settings → API.
+2. Create an admin user
+In your Supabase project go to Authentication → Users → Add user.
+Create a user with an email and password. This is what you'll use to log in.
+The app uses signInWithPassword — only users you create manually can log in.
+3. GitHub Pages
+Create a new GitHub repo (e.g. recruit-admin)
+Push admin.html as the only file
+Go to repo Settings → Pages
+Set source to main branch, root folder
+Your admin portal will be live at https://yourusername.github.io/recruit-admin/admin.html
+Keep this URL private. Share it only with people who should have admin access.
+File Structure
+recruit-admin/
+└── admin.html       ← entire app (HTML + CSS + JS)
+└── README.md
+Supabase RLS Note
+The admin dashboard uses authenticated Supabase sessions.
+Your supabase_setup.sql from the application form repo already includes:
+CREATE POLICY "Authenticated read"
+  ON applications FOR SELECT TO authenticated USING (true);
+Make sure this policy is in place. Authenticated users can also UPDATE and DELETE — add those policies if needed:
+CREATE POLICY "Authenticated update"
+  ON applications FOR UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Authenticated delete"
+  ON applications FOR DELETE TO authenticated USING (true);
+Run these in your Supabase SQL Editor.
+PDF Libraries Used (CDN)
+jsPDF 2.5.1
+jspdf-autotable 3.8.2
+No npm install needed — both load from Cloudflare CDN.
