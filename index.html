@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Job Application – Apply Now</title>
+
+  <!-- Supabase JS (CDN, production build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="assets/css/user.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="header-logo">
+    <img src="logo.png" alt="Lombicor Logo" style="max-height: 80px; margin-bottom: 16px;">
+  </div>
+  <div class="header-label">Lombicor Seasonal Recruitment</div>
+  <div class="header-title">Apply <span>Now</span></div>
+  <div class="header-sub">Complete all fields below to submit your application for the current season</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="wrapper" id="form-wrapper">
+
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+  <form id="app-form" novalidate>
+
+    <!-- ===== PERSONAL INFORMATION ===== -->
+    <div class="section-title">Personal Information</div>
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label for="first_name">Name <span class="req">*</span></label>
+        <input type="text" id="first_name" name="first_name" placeholder="e.g. John" autocomplete="given-name"/>
+        <span class="error-msg" id="err-first_name">Please enter your name.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="surname">Surname <span class="req">*</span></label>
+        <input type="text" id="surname" name="surname" placeholder="e.g. Smith" autocomplete="family-name"/>
+        <span class="error-msg" id="err-surname">Please enter your surname.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="id_number">SA ID Number <span class="req">*</span></label>
+        <input type="text" id="id_number" name="id_number" placeholder="13-digit ID number" maxlength="13" inputmode="numeric"/>
+        <span class="error-msg" id="err-id_number">Please enter a valid 13-digit SA ID number.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="contact_number">Contact Number <span class="req">*</span></label>
+        <input type="tel" id="contact_number" name="contact_number" placeholder="e.g. 0812345678" maxlength="10" inputmode="numeric"/>
+        <span class="error-msg" id="err-contact_number">Please enter a valid 10-digit SA phone number.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="race">Race <span class="req">*</span></label>
+        <select id="race" name="race">
+          <option value="">— Select —</option>
+          <option>African / Black</option>
+          <option>Coloured</option>
+          <option>Indian / Asian</option>
+          <option>White</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
+        <span class="error-msg" id="err-race">Please select your race.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="gender">Gender <span class="req">*</span></label>
+        <select id="gender" name="gender">
+          <option value="">— Select —</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Non-binary</option>
+          <option>Prefer not to say</option>
+        </select>
+        <span class="error-msg" id="err-gender">Please select your gender.</span>
+      </div>
+
+      <div class="form-group full">
+        <label for="address">Address <span class="req">*</span></label>
+        <input type="text" id="address" name="address" placeholder="Street, City, Province" autocomplete="street-address"/>
+        <span class="error-msg" id="err-address">Please enter your address.</span>
+      </div>
+
+    </div>
+
+    <!-- ===== COMPULSORY DOCUMENTS ===== -->
+    <div class="section-title">Compulsory Documents</div>
+    <div class="notice">All three documents below are required before your application can be submitted.</div>
+    <div class="form-grid" style="margin-top:16px;">
+
+      <div class="form-group">
+        <label>ID Copy <span class="req">*</span></label>
+        <div class="file-upload-area" id="area-id_copy" ondragover="handleDragOver(event,'area-id_copy')" ondragleave="handleDragLeave('area-id_copy')" ondrop="handleDrop(event,'id_copy','area-id_copy')">
+          <input type="file" id="id_copy" name="id_copy" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileChange('id_copy','area-id_copy')"/>
+          <div class="upload-icon">🪪</div>
+          <div class="upload-label">Upload ID Copy</div>
+          <div class="upload-sub">PDF, JPG or PNG · max 5 MB</div>
+          <div class="file-name" id="fn-id_copy"></div>
+        </div>
+        <span class="error-msg" id="err-id_copy">Please upload a copy of your ID.</span>
+      </div>
+
+      <div class="form-group">
+        <label>Proof of SARS <span class="req">*</span></label>
+        <div class="file-upload-area" id="area-proof_sars" ondragover="handleDragOver(event,'area-proof_sars')" ondragleave="handleDragLeave('area-proof_sars')" ondrop="handleDrop(event,'proof_sars','area-proof_sars')">
+          <input type="file" id="proof_sars" name="proof_sars" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileChange('proof_sars','area-proof_sars')"/>
+          <div class="upload-icon">📋</div>
+          <div class="upload-label">Upload SARS Proof</div>
+          <div class="upload-sub">PDF, JPG or PNG · max 5 MB</div>
+          <div class="file-name" id="fn-proof_sars"></div>
+        </div>
+        <span class="error-msg" id="err-proof_sars">Please upload proof of SARS.</span>
+      </div>
+
+      <div class="form-group">
+        <label>Proof of Bank Account <span class="req">*</span></label>
+        <div class="file-upload-area" id="area-proof_bank" ondragover="handleDragOver(event,'area-proof_bank')" ondragleave="handleDragLeave('area-proof_bank')" ondrop="handleDrop(event,'proof_bank','area-proof_bank')">
+          <input type="file" id="proof_bank" name="proof_bank" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileChange('proof_bank','area-proof_bank')"/>
+          <div class="upload-icon">🏦</div>
+          <div class="upload-label">Upload Bank Statement</div>
+          <div class="upload-sub">PDF, JPG or PNG · max 5 MB</div>
+          <div class="file-name" id="fn-proof_bank"></div>
+        </div>
+        <span class="error-msg" id="err-proof_bank">Please upload proof of bank account.</span>
+      </div>
+
+    </div>
+
+    <!-- ===== PACKHOUSE EXPERIENCE ===== -->
+    <div class="section-title">Packhouse Experience</div>
+    <div class="form-group">
+      <label>Do you have packhouse experience? <span class="req">*</span></label>
+      <div class="radio-group" id="packhouse-radio">
+        <div class="radio-btn">
+          <input type="radio" id="pack-yes" name="packhouse_exp" value="yes" onchange="toggleConditional('packhouse-conditional', true)"/>
+          <label for="pack-yes">✓ Yes</label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" id="pack-no" name="packhouse_exp" value="no" onchange="toggleConditional('packhouse-conditional', false)"/>
+          <label for="pack-no">✗ No</label>
+        </div>
+      </div>
+      <span class="error-msg" id="err-packhouse_exp">Please select an option.</span>
+    </div>
+
+    <div class="conditional" id="packhouse-conditional">
+      <div class="form-group">
+        <label>Upload Payslip as Proof of Experience <span class="req">*</span></label>
+        <div class="file-upload-area" id="area-payslip" ondragover="handleDragOver(event,'area-payslip')" ondragleave="handleDragLeave('area-payslip')" ondrop="handleDrop(event,'payslip','area-payslip')">
+          <input type="file" id="payslip" name="payslip" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileChange('payslip','area-payslip')"/>
+          <div class="upload-icon">💼</div>
+          <div class="upload-label">Upload Payslip</div>
+          <div class="upload-sub">PDF, JPG or PNG · max 5 MB</div>
+          <div class="file-name" id="fn-payslip"></div>
+        </div>
+        <span class="error-msg" id="err-payslip">Please upload your payslip as proof.</span>
+      </div>
+    </div>
+
+    <!-- ===== FORKLIFT LICENCE ===== -->
+    <div class="section-title">Forklift Licence</div>
+    <div class="form-group">
+      <label>Do you have a forklift licence? <span class="req">*</span></label>
+      <div class="radio-group" id="forklift-radio">
+        <div class="radio-btn">
+          <input type="radio" id="fork-yes" name="forklift_licence" value="yes" onchange="toggleConditional('forklift-conditional', true)"/>
+          <label for="fork-yes">✓ Yes</label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" id="fork-no" name="forklift_licence" value="no" onchange="toggleConditional('forklift-conditional', false)"/>
+          <label for="fork-no">✗ No</label>
+        </div>
+      </div>
+      <span class="error-msg" id="err-forklift_licence">Please select an option.</span>
+    </div>
+
+    <div class="conditional" id="forklift-conditional">
+      <div class="form-group">
+        <label>Upload Valid Forklift Licence <span class="req">*</span></label>
+        <div class="file-upload-area" id="area-forklift_doc" ondragover="handleDragOver(event,'area-forklift_doc')" ondragleave="handleDragLeave('area-forklift_doc')" ondrop="handleDrop(event,'forklift_doc','area-forklift_doc')">
+          <input type="file" id="forklift_doc" name="forklift_doc" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileChange('forklift_doc','area-forklift_doc')"/>
+          <div class="upload-icon">🏗️</div>
+          <div class="upload-label">Upload Forklift Licence</div>
+          <div class="upload-sub">PDF, JPG or PNG · max 5 MB</div>
+          <div class="file-name" id="fn-forklift_doc"></div>
+        </div>
+        <span class="error-msg" id="err-forklift_doc">Please upload your forklift licence.</span>
+      </div>
+    </div>
+
+    <!-- ===== SUBMIT ===== -->
+    <div class="submit-wrap">
+      <div id="global-error"></div>
+      <button type="submit" class="btn-submit" id="btn-submit">
+        <span class="btn-text">Submit Application</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- THANK YOU -->
+<div id="thank-you" class="wrapper">
+  <div class="ty-icon">✅</div>
+  <div class="ty-title">Application Received</div>
+  <div class="ty-sub">Thank you for applying. We'll review your details and be in touch if your profile matches an available opportunity.</div>
+  <div class="ty-ref" id="ty-ref"></div>
+</div>
+
+
+<!-- ===================== JAVASCRIPT ===================== -->
+<script src="assets/js/config.js"></script>
+<script src="assets/js/user.js"></script>
+
+</body>
+</html>

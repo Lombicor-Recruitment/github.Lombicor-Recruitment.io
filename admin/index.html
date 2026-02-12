@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Portal – Recruitment</title>
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../assets/css/admin.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-label">Recruitment Portal</div>
+    <div class="login-title">Admin <span>Access</span></div>
+    <div class="lf">
+      <label>Username</label>
+      <input type="text" id="login-email" placeholder="GitHub Username" autocomplete="username"/>
+    </div>
+    <div class="lf">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Access Token" autocomplete="current-password"/>
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+    <hr class="login-sep"/>
+    <div class="login-note">Authorised personnel only. All activity is logged.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     APP SHELL
+═══════════════════════════════════ -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-dot"></div>
+      Recruit<span>Admin</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-user">
+      <span>Signed in as <span class="topbar-email" id="user-email">—</span></span>
+      <button class="btn-signout" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="nav-section">Navigation</div>
+      <div class="nav-item active" onclick="showPage('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-item" onclick="showPage('applicants')" id="nav-applicants">
+        <span class="nav-icon">👥</span> Applicants
+      </div>
+      <div class="nav-item" onclick="showPage('export')" id="nav-export">
+        <span class="nav-icon">📤</span> Export
+      </div>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-version">v1.1.0 · Admin</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ═══ PAGE: OVERVIEW ═══ -->
+      <div class="page active" id="page-overview">
+        <div class="page-title">Overview</div>
+        <div class="page-subtitle">Live summary of all application data</div>
+
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total Applications</div>
+            <div class="stat-value green" id="stat-total">—</div>
+            <div class="stat-sub">All time</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">This Month</div>
+            <div class="stat-value blue" id="stat-month">—</div>
+            <div class="stat-sub" id="stat-month-label">—</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Packhouse Exp.</div>
+            <div class="stat-value amber" id="stat-pack">—</div>
+            <div class="stat-sub">Have experience</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Forklift Licence</div>
+            <div class="stat-value" id="stat-fork" style="color:var(--blue)">—</div>
+            <div class="stat-sub">Have licence</div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-title">Applications per month (last 6 months)</div>
+          <div class="bar-chart" id="monthly-chart"></div>
+        </div>
+
+        <div class="section-head">
+          <h2>Recent Applications</h2>
+          <div class="section-line"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ref</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Pack. Exp</th>
+                <th>Forklift</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="recent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ PAGE: APPLICANTS ═══ -->
+      <div class="page" id="page-applicants">
+        <div class="page-title">Applicants</div>
+        <div class="page-subtitle">Search, filter, view and manage all applications</div>
+
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search name, ID, phone, ref…" oninput="onSearch()"/>
+          </div>
+          <select class="filter" id="filter-pack" onchange="onFilter()">
+            <option value="">All Packhouse</option>
+            <option value="true">Has Experience</option>
+            <option value="false">No Experience</option>
+          </select>
+          <select class="filter" id="filter-fork" onchange="onFilter()">
+            <option value="">All Forklift</option>
+            <option value="true">Has Licence</option>
+            <option value="false">No Licence</option>
+          </select>
+          <select class="filter" id="filter-gender" onchange="onFilter()">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+          </select>
+          <select class="filter" id="filter-race" onchange="onFilter()">
+            <option value="">All Races</option>
+            <option value="African / Black">African / Black</option>
+            <option value="Coloured">Coloured</option>
+            <option value="Indian / Asian">Indian / Asian</option>
+            <option value="White">White</option>
+          </select>
+          <input type="date" class="filter" id="filter-from" onchange="onFilter()" title="From date"/>
+          <input type="date" class="filter" id="filter-to" onchange="onFilter()" title="To date"/>
+          <button class="btn" onclick="clearFilters()">✕ Clear</button>
+          <button class="btn primary" onclick="exportSelectedPDF()" id="btn-export-sel" disabled>⬇ Export Selected PDF</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="cb-col"><input type="checkbox" id="cb-all" onchange="toggleAll(this)"/></th>
+                <th onclick="sortBy('ref_id')">Ref <span class="sort-arrow" id="sort-ref_id">↕</span></th>
+                <th onclick="sortBy('first_name')">Name <span class="sort-arrow" id="sort-first_name">↕</span></th>
+                <th onclick="sortBy('id_number')">ID Number <span class="sort-arrow" id="sort-id_number">↕</span></th>
+                <th>Gender</th>
+                <th>Race</th>
+                <th>Contact</th>
+                <th onclick="sortBy('packhouse_exp')">Pack. <span class="sort-arrow" id="sort-packhouse_exp">↕</span></th>
+                <th onclick="sortBy('forklift_licence')">Fork. <span class="sort-arrow" id="sort-forklift_licence">↕</span></th>
+                <th onclick="sortBy('submitted_at')">Date <span class="sort-arrow" id="sort-submitted_at">↕</span></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="main-tbody"></tbody>
+          </table>
+          <div class="table-footer">
+            <span id="table-count">Loading…</span>
+            <div class="pagination">
+              <button class="pg-btn" id="pg-prev" onclick="changePage(-1)">← Prev</button>
+              <span class="pg-info" id="pg-info">—</span>
+              <button class="pg-btn" id="pg-next" onclick="changePage(1)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PAGE: EXPORT ═══ -->
+      <div class="page" id="page-export">
+        <div class="page-title">Export Data</div>
+        <div class="page-subtitle">Download filtered records as PDF or CSV</div>
+
+        <div class="export-grid">
+
+          <!-- PDF by date range -->
+          <div class="export-card">
+            <div class="export-card-icon">📄</div>
+            <div class="export-card-title">PDF by Date Range</div>
+            <div class="export-card-desc">Export a formatted PDF report of all applications within a specified date range.</div>
+            <div class="filter-row">
+              <label>From</label>
+              <input type="date" id="exp-from" class="filter"/>
+            </div>
+            <div class="filter-row">
+              <label>To</label>
+              <input type="date" id="exp-to" class="filter"/>
+            </div>
+            <button class="btn primary" style="width:100%" onclick="exportPDFDateRange()">⬇ Export PDF</button>
+          </div>
+
+          <!-- PDF by type -->
+          <div class="export-card">
+            <div class="export-card-icon">🔎</div>
+            <div class="export-card-title">PDF by Applicant Type</div>
+            <div class="export-card-desc">Export applicants filtered by packhouse experience and/or forklift licence status.</div>
+            <div class="filter-row">
+              <label>Packhouse Experience</label>
+              <select id="exp-pack" class="filter">
+                <option value="">Any</option>
+                <option value="true">Yes – Has Experience</option>
+                <option value="false">No – No Experience</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>Forklift Licence</label>
+              <select id="exp-fork" class="filter">
+                <option value="">Any</option>
+                <option value="true">Yes – Has Licence</option>
+                <option value="false">No – No Licence</option>
+              </select>
+            </div>
+            <button class="btn primary" style="width:100%" onclick="exportPDFByType()">⬇ Export PDF</button>
+          </div>
+
+          <!-- CSV full DB -->
+          <div class="export-card">
+            <div class="export-card-icon">🗄️</div>
+            <div class="export-card-title">Full Database CSV</div>
+            <div class="export-card-desc">Download the entire applications database as a CSV file. Suitable for spreadsheet analysis or backup.</div>
+            <div style="flex:1;min-height:80px;"></div>
+            <button class="btn primary" style="width:100%;margin-top:16px" onclick="exportFullCSV()">⬇ Download Full CSV</button>
+          </div>
+
+          <!-- CSV filtered -->
+          <div class="export-card">
+            <div class="export-card-icon">📊</div>
+            <div class="export-card-title">Filtered CSV Export</div>
+            <div class="export-card-desc">Export CSV using the active filters set on the Applicants page (search, date, type).</div>
+            <div style="flex:1;min-height:80px;"></div>
+            <button class="btn primary" style="width:100%;margin-top:16px" onclick="exportFilteredCSV()">⬇ Export Filtered CSV</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════
+     MODAL: VIEW / EDIT APPLICANT
+═══════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Applicant Details</div>
+        <div class="modal-ref" id="modal-ref"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal(true)">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section">
+        <div class="modal-section-title">Personal Information</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Name</label>
+            <input type="text" id="mf-first_name"/>
+          </div>
+          <div class="modal-field">
+            <label>Surname</label>
+            <input type="text" id="mf-surname"/>
+          </div>
+          <div class="modal-field">
+            <label>ID Number</label>
+            <input type="text" id="mf-id_number"/>
+          </div>
+          <div class="modal-field">
+            <label>Contact Number</label>
+            <input type="text" id="mf-contact_number"/>
+          </div>
+          <div class="modal-field">
+            <label>Gender</label>
+            <select id="mf-gender">
+              <option>Male</option><option>Female</option>
+              <option>Non-binary</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Race</label>
+            <select id="mf-race">
+              <option>African / Black</option><option>Coloured</option>
+              <option>Indian / Asian</option><option>White</option>
+              <option>Other</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Address</label>
+            <input type="text" id="mf-address"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Experience &amp; Skills</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Packhouse Experience</label>
+            <select id="mf-packhouse_exp">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Forklift Licence</label>
+            <select id="mf-forklift_licence">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Uploaded Documents</div>
+        <div class="docs-grid" id="modal-docs"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="btn" onclick="exportSinglePDF()">📄 Export PDF</button>
+      <button class="btn danger" onclick="confirmDelete()">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CONFIRM DIALOG
+═══════════════════════════════════ -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">⚠️</div>
+    <div class="confirm-title" id="confirm-title">Confirm Delete</div>
+    <div class="confirm-msg" id="confirm-msg">This action cannot be undone.</div>
+    <div class="confirm-btns">
+      <button class="btn danger" id="confirm-yes" onclick="confirmYes()">Delete</button>
+      <button class="btn" onclick="confirmNo()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-wrap"></div>
+
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════ -->
+<script src="../assets/js/config.js"></script>
+<script src="../assets/js/admin.js"></script>
+
+</body>
+</html>
