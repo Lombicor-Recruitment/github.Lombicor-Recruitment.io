@@ -1,8 +1,6 @@
 -- ============================================================
---  SUPABASE SETUP SCRIPT
---  Run this in your Supabase project → SQL Editor
+--  UPDATED SUPABASE SETUP SCRIPT (With Admin Edit/Delete)
 -- ============================================================
-
 
 -- 1. APPLICATIONS TABLE
 -- ============================================================
@@ -34,55 +32,50 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 
--- 2. ROW LEVEL SECURITY
+-- 2. ROW LEVEL SECURITY (RLS)
 -- ============================================================
--- Enable RLS on the table
 ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous INSERT (the public form submits without auth)
+-- 2.1 Allow Public to Submit Forms (Insert Only)
+-- Drop policy if it exists to avoid conflicts
+DROP POLICY IF EXISTS "Allow public insert" ON applications;
 CREATE POLICY "Allow public insert"
   ON applications
   FOR INSERT
   TO anon
   WITH CHECK (true);
 
--- Only authenticated users (you) can SELECT / UPDATE / DELETE
-CREATE POLICY "Authenticated read"
+-- 2.2 Allow Admin Full Access (Read, Edit, Delete)
+-- Drop old restrictive policy if it exists
+DROP POLICY IF EXISTS "Authenticated read" ON applications;
+DROP POLICY IF EXISTS "Admin full access" ON applications;
+
+CREATE POLICY "Admin full access"
   ON applications
-  FOR SELECT
+  FOR ALL                 -- << CHANGED: Allows SELECT, INSERT, UPDATE, DELETE
   TO authenticated
-  USING (true);
+  USING (true)
+  WITH CHECK (true);
 
 
 -- 3. STORAGE BUCKET
 -- ============================================================
--- Create the storage bucket (run in SQL or do it in the dashboard)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('applications', 'applications', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Allow anon to upload files into the bucket
+-- 3.1 Allow Public to Upload Files
+DROP POLICY IF EXISTS "Allow anon uploads" ON storage.objects;
 CREATE POLICY "Allow anon uploads"
   ON storage.objects
   FOR INSERT
   TO anon
   WITH CHECK (bucket_id = 'applications');
 
--- Allow authenticated users to read/download files
+-- 3.2 Allow Admin to Read Files
+DROP POLICY IF EXISTS "Authenticated can read files" ON storage.objects;
 CREATE POLICY "Authenticated can read files"
   ON storage.objects
   FOR SELECT
   TO authenticated
   USING (bucket_id = 'applications');
-
-
--- ============================================================
---  DONE!
---  Next steps:
---  1. Copy your Project URL and anon key from:
---     Supabase Dashboard → Project Settings → API
---  2. Paste them into index.html:
---       const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
---       const SUPABASE_ANON = 'YOUR_ANON_PUBLIC_KEY';
---  3. Push index.html to your GitHub repo and enable Pages.
--- ============================================================

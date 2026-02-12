@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supabase Verification</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        body { font-family: monospace; background: #111; color: #eee; padding: 20px; line-height: 1.5; }
+        .box { max-width: 800px; margin: 0 auto; background: #222; padding: 20px; border-radius: 8px; }
+        h1 { margin-top: 0; color: #f0a500; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .step { margin-bottom: 15px; padding: 10px; background: #333; border-radius: 4px; }
+        .step.pending { border-left: 4px solid #aaa; }
+        .step.success { border-left: 4px solid #4caf50; background: #1e3320; }
+        .step.error { border-left: 4px solid #f44336; background: #331e1e; }
+        .status { float: right; font-weight: bold; }
+        .status.ok { color: #4caf50; }
+        .status.fail { color: #f44336; }
+        input { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: #fff; margin-bottom: 15px; font-family: monospace; }
+        button { background: #d92323; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #b71c1c; }
+        #logs { white-space: pre-wrap; margin-top: 20px; font-size: 12px; color: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Supabase Configuration Check</h1>
+        <p>This tool verifies if your Supabase project is correctly set up for the Lombicor Application.</p>
+        
+        <div style="margin-bottom:20px;">
+            <label>Enter Service Role Key (from .env):</label>
+            <input type="password" id="service-key" placeholder="sb_secret_..." />
+        </div>
+
+        <div id="steps">
+            <div class="step pending" id="step-conn">1. Checking Connection... <span class="status" id="st-conn"></span></div>
+            <div class="step pending" id="step-table">2. Checking 'applications' Table... <span class="status" id="st-table"></span></div>
+            <div class="step pending" id="step-bucket">3. Checking 'applications' Storage Bucket... <span class="status" id="st-bucket"></span></div>
+            <div class="step pending" id="step-policy">4. Testing Public Upload Policy... <span class="status" id="st-policy"></span></div>
+        </div>
+
+        <button onclick="runCheck()" id="btn">Run Verification</button>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const SUPABASE_URL = 'https://thozwctjtuzjhneupqvr.supabase.co';
+
+        function log(msg) {
+            const el = document.getElementById('logs');
+            el.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        function setStatus(id, status, msg) {
+            const el = document.getElementById('step-' + id);
+            const st = document.getElementById('st-' + id);
+            if (status === 'success') {
+                el.className = 'step success';
+                st.className = 'status ok';
+                st.textContent = 'OK';
+            } else if (status === 'error') {
+                el.className = 'step error';
+                st.className = 'status fail';
+                st.textContent = 'FAILED';
+                log(`[ERROR] ${msg}`);
+            } else {
+                el.className = 'step pending';
+                st.textContent = '...';
+            }
+        }
+
+        async function runCheck() {
+            const serviceKey = document.getElementById('service-key').value.trim();
+            if (!serviceKey) { alert('Please enter your Service Role Key'); return; }
+
+            const client = supabase.createClient(SUPABASE_URL, serviceKey);
+
+            document.getElementById('logs').textContent = '';
+            document.getElementById('btn').disabled = true;
+            document.getElementById('btn').textContent = 'Running...';
+            
+            // 1. Connection
+            try {
+                setStatus('conn', 'pending');
+                const { data, error } = await client.from('applications').select('count', { count: 'exact', head: true });
+                if (error && error.code !== '42P01') throw error; 
+                setStatus('conn', 'success');
+            } catch (err) {
+                setStatus('conn', 'error', err.message);
+                document.getElementById('btn').disabled = false;
+                return;
+            }
+
+            // 2. Table
+            try {
+                setStatus('table', 'pending');
+                const { error } = await client.from('applications').select('id').limit(1);
+                if (error) {
+                    if (error.code === '42P01') throw new Error("Table 'applications' does not exist.");
+                    throw error;
+                }
+                setStatus('table', 'success');
+            } catch (err) {
+                setStatus('table', 'error', err.message);
+            }
+
+            // 3. Bucket
+            try {
+                setStatus('bucket', 'pending');
+                const { data: buckets, error } = await client.storage.listBuckets();
+                if (error) throw error;
+                
+                const bucket = buckets.find(b => b.name === 'applications');
+                if (!bucket) {
+                    log("Bucket missing. Attempting to create...");
+                    const { data: newBucket, error: createErr } = await client.storage.createBucket('applications', {
+                        public: false,
+                        fileSizeLimit: 5242880,
+                        allowedMimeTypes: ['image/png', 'image/jpeg', 'application/pdf']
+                    });
+                    if (createErr) throw new Error("Bucket missing and creation failed: " + createErr.message);
+                    log("Bucket 'applications' created successfully.");
+                }
+                setStatus('bucket', 'success');
+            } catch (err) {
+                setStatus('bucket', 'error', err.message);
+            }
+
+            // 4. Policy (Test Upload)
+            try {
+                setStatus('policy', 'pending');
+                const blob = new Blob(['test'], { type: 'text/plain' });
+                const fileName = 'verify_test_' + Date.now() + '.txt';
+                
+                const { data, error } = await client.storage.from('applications').upload(fileName, blob);
+                if (error) throw error;
+                
+                await client.storage.from('applications').remove([fileName]);
+                
+                setStatus('policy', 'success');
+                log("Write access confirmed (Admin). Public access requires RLS policies check.");
+            } catch (err) {
+                setStatus('policy', 'error', err.message);
+            }
+
+            document.getElementById('btn').disabled = false;
+            document.getElementById('btn').textContent = 'Run Verification';
+        }
+    </script>
+</body>
+</html>
